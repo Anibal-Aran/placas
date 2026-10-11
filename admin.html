@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Administración · Placas de financiación</title>
+<style>
+:root{--bg:#F2F3F5;--panel:#fff;--soft:#F7F8FA;--ink:#141A22;--ink2:#47515E;--muted:#6B7480;--line:#E2E5EA;--line2:#CDD2DA;
+  --acc:#1D2331;--acc-ink:#fff;--ok:#137A3A;--mal:#9A4B00;--mal-bg:#FFF4E2;
+  --f:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0D1117;--panel:#161B22;--soft:#1C222B;--ink:#EEF1F5;--ink2:#C3CAD4;--muted:#8C96A3;
+  --line:#2A313C;--line2:#3A4250;--acc:#EEF1F5;--acc-ink:#161B22;--ok:#5BD08A;--mal:#FFB869;--mal-bg:#33240F;color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--f);-webkit-font-smoothing:antialiased}
+.caja{max-width:560px;margin:0 auto;padding:28px 16px 40px}
+header h1{margin:0;font-size:21px;letter-spacing:-.01em}
+header p{margin:2px 0 18px;color:var(--ink2);font-size:14px}
+.tarjeta{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 16px;margin-bottom:12px;
+  box-shadow:0 1px 2px rgba(16,24,40,.05),0 4px 14px rgba(16,24,40,.05)}
+h2{margin:0 0 4px;font-size:16.5px}
+.ayuda{margin:4px 0 10px;color:var(--ink2);font-size:13.5px}
+.dato{margin:10px 0 0;color:var(--muted);font-size:13px}
+label{display:block;font-weight:650;font-size:14px;margin:10px 0 6px}
+input[type=password],input[type=text]{width:100%;height:44px;border:1.5px solid var(--line2);border-radius:9px;padding:0 12px;font:inherit;
+  font-size:16px;background:var(--panel);color:var(--ink);min-width:0}
+input:focus{outline:2px solid var(--acc);outline-offset:1px}
+button,.btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 14px;border-radius:9px;
+  border:1.5px solid var(--line2);background:var(--panel);color:var(--ink);font:inherit;font-weight:700;font-size:14.5px;
+  cursor:pointer;text-decoration:none;white-space:nowrap}
+button.pri,.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+button:disabled{opacity:.55;cursor:wait}
+form.tarjeta button.pri{width:100%;margin-top:14px}
+.clave{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.clave code{flex:1 1 180px;min-height:44px;display:flex;align-items:center;padding:0 12px;border-radius:9px;background:var(--soft);
+  border:1px solid var(--line);font:600 16px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;
+  overflow-wrap:anywhere}
+.fila{display:flex;gap:8px}
+.fila input{flex:1}
+details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-weight:700;font-size:14.5px;color:var(--ink)}
+details .pri{margin-top:12px}
+.pasos{margin:8px 0 10px;padding-left:20px;color:var(--ink2);font-size:13.5px}
+.pasos li{margin:3px 0}
+.pasos a{color:inherit}
+.estado{font-size:14px;margin:4px 0 0}
+.estado.ok{color:var(--ok)}
+.estado.falta{color:var(--mal)}
+.msg{margin:10px 0 0;font-size:14px;min-height:20px}
+.msg.ok{color:var(--ok)}
+.msg.mal{color:var(--mal)}
+.acciones{display:flex;gap:8px;flex-wrap:wrap}
+.nota{color:var(--muted);font-size:13px;margin:16px 2px 0}
+</style>
+</head>
+<body>
+<main class="caja">
+  <header><h1>Administración</h1><p>Placas de financiación · acceso y claves</p></header>
+
+  <form class="tarjeta" id="ingreso" hidden autocomplete="on">
+    <input type="text" name="username" value="placas-admin" autocomplete="username" hidden>
+    <label for="clave-adm" style="margin-top:0">Clave de administrador</label>
+    <input type="password" id="clave-adm" name="password" autocomplete="current-password" required>
+    <button class="pri" id="b-entrar">Entrar</button>
+    <div class="msg mal" id="msg-ingreso" role="alert"></div>
+  </form>
+
+  <div id="panel" hidden>
+    <section class="tarjeta">
+      <h2>Clave de los vendedores</h2>
+      <p class="ayuda">Con ésta entran a usar la app. No ven esta página ni pueden cambiar nada.</p>
+      <div class="clave"><code id="clave-vend">••••••••••</code><button type="button" id="b-ver">Mostrar</button><button type="button" id="b-copiar">Copiar</button></div>
+      <p class="dato">Último cambio de claves: <span id="cambio">—</span></p>
+      <details id="d-vend">
+        <summary>Cambiar la clave de los vendedores</summary>
+        <label for="nueva-vend">Clave nueva</label>
+        <div class="fila"><input type="text" id="nueva-vend" autocomplete="off" spellcheck="false"><button type="button" id="b-generar">Generar una</button></div>
+        <p class="ayuda">Al publicarla, los equipos que tenían la clave recordada la van a pedir de nuevo. Pasásela a los vendedores que siguen.</p>
+        <button type="button" class="pri" id="b-guardar-vend">Guardar y publicar</button>
+      </details>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Tu clave de administrador</h2>
+      <p class="ayuda">Sólo para esta página. Guardala en un lugar seguro.</p>
+      <details id="d-adm">
+        <summary>Cambiar mi clave</summary>
+        <label for="nueva-adm">Clave nueva</label>
+        <input type="password" id="nueva-adm" autocomplete="new-password">
+        <label for="nueva-adm2">Repetila</label>
+        <input type="password" id="nueva-adm2" autocomplete="new-password">
+        <p class="ayuda">Si la perdés, el acceso se regenera desde el repo de la empresa (pedíselo a Claude Code).</p>
+        <button type="button" class="pri" id="b-guardar-adm">Guardar y publicar</button>
+      </details>
+    </section>
+
+    <section class="tarjeta">
+      <h2>Publicar desde este equipo</h2>
+      <p class="estado" id="estado-gh">—</p>
+      <details id="d-gh">
+        <summary>Configurar el permiso de GitHub</summary>
+        <p class="ayuda">Una sola vez por equipo. Es un permiso que sólo sirve para publicar esta app.</p>
+        <ol class="pasos">
+          <li>Con la cuenta <b>Anibal-Aran</b>, entrá a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub › Fine-grained tokens › Generate new token</a>.</li>
+          <li>Nombre: <b>Placas admin</b>. Vencimiento: el que prefieras (por ejemplo, un año).</li>
+          <li>Repository access: <b>Only select repositories</b> › <b>placas</b>.</li>
+          <li>Permissions › Repository permissions › <b>Contents: Read and write</b>. Nada más.</li>
+          <li><b>Generate token</b>, copialo y pegalo acá abajo.</li>
+        </ol>
+        <input type="password" id="token" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+        <button type="button" class="pri" id="b-guardar-token">Guardar y probar</button>
+        <p class="ayuda">Queda guardado sólo en este navegador, cifrado con tu clave de administrador.</p>
+      </details>
+    </section>
+
+    <section class="tarjeta acciones">
+      <a class="btn pri" href="./">Abrir la app</a>
+      <button type="button" id="b-salir">Salir</button>
+    </section>
+
+    <p class="nota">Los descuentos, textos y contactos de las placas salen de los estándares (PR-212-001-00, PR-215-001-00,
+      PR-215-002-00 y sus placas PO). Se cambian en esa fuente común y la app se vuelve a publicar, así los procedimientos,
+      las placas y la app nunca dicen cosas distintas.</p>
+  </div>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+</main>
+<script>
+/* Administración de la app de placas. La página es pública; lo que protege es la criptografía:
+   · la app está cifrada (AES-256-GCM) con una llave al azar, guardada dos veces: cerrada con la clave de los
+     vendedores y con la del administrador (PBKDF2-SHA256);
+   · con la clave de administrador se abre esa llave y la clave de los vendedores, y se puede volver a cerrar
+     todo con claves nuevas;
+   · para publicar el cambio hace falta además un permiso de GitHub limitado al repo de la app, que queda en este
+     navegador cifrado con la clave de administrador. */
+(function () {
+  'use strict';
+  var API = 'https://api.github.com', REPO = 'Anibal-Aran/placas', ARCHIVO = 'index.html', TOKEN_LS = 'placas.admin.permiso';
+  var enc = new TextEncoder(), dec = new TextDecoder();
+  var S = { clave: null, ka: null, raw: null, vend: null, acc: null, token: null };
+
+  function $(id) { return document.getElementById(id); }
+  function bytes(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) { u[i] = b.charCodeAt(i); } return u; }
+  function b64(buf) {
+    var u = buf instanceof Uint8Array ? buf : new Uint8Array(buf), s = '';
+    for (var i = 0; i < u.length; i += 32768) { s += String.fromCharCode.apply(null, u.subarray(i, i + 32768)); }
+    return btoa(s);
+  }
+  function azar(n) { return crypto.getRandomValues(new Uint8Array(n)); }
+  function aviso(txt, tipo) { var m = $('msg'); m.textContent = txt || ''; m.className = 'msg' + (tipo ? ' ' + tipo : ''); }
+  function guardarLS(k, v) { try { if (v === null) { localStorage.removeItem(k); } else { localStorage.setItem(k, v); } } catch (e) {} }
+  function leerLS(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  // ───────────────────────── cripto
+  function kdf(clave, sal, iter) {
+    return crypto.subtle.importKey('raw', enc.encode(clave), 'PBKDF2', false, ['deriveKey']).then(function (base) {
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: sal, iterations: iter, hash: 'SHA-256' },
+        base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    });
+  }
+  function sellar(llave, datos) {
+    var iv = azar(12);
+    return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, llave, datos).then(function (ct) { return { iv: b64(iv), ct: b64(ct) }; });
+  }
+  function abrir(llave, iv, ct) {
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytes(iv) }, llave, bytes(ct)).then(function (p) { return new Uint8Array(p); });
+  }
+  function llaveApp(raw) { return crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']); }
+
+  /** Con la clave de administrador abre la llave de la app y la clave de los vendedores. */
+  function sesionDe(acc, clave) {
+    var ka;
+    return kdf(clave, bytes(acc.adm.sal), acc.iter).then(function (k) {
+      ka = k;
+      return Promise.all([abrir(ka, acc.adm.iv, acc.adm.k), abrir(ka, acc.adm.ivc, acc.adm.c)]);
+    }).then(function (r) { return { ka: ka, raw: r[0], vend: dec.decode(r[1]), acc: acc }; });
+  }
+
+  // ───────────────────────── la página publicada
+  var BLOQUE = /(<script type="application\/json" id="acceso">)([\s\S]*?)(<\/script>)/;
+  function extraer(html) {
+    var m = BLOQUE.exec(html);
+    if (!m) { throw new Error('No encontré los datos de acceso en la app publicada.'); }
+    return JSON.parse(m[2]);
+  }
+  function reemplazar(html, acc) {
+    return html.replace(BLOQUE, function (_, a, x, c) { return a + JSON.stringify(acc).replace(/<\//g, '<\\/') + c; });
+  }
+  function publicada() {
+    return fetch('./' + ARCHIVO + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) { throw new Error('No pude leer la app publicada (' + r.status + ').'); }
+      return r.text();
+    });
+  }
+
+  // ───────────────────────── GitHub
+  function gh(ruta, op) {
+    op = op || {};
+    var h = { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + S.token, 'X-GitHub-Api-Version': '2022-11-28' };
+    Object.keys(op.headers || {}).forEach(function (k) { h[k] = op.headers[k]; });
+    return fetch(API + ruta, { method: op.method || 'GET', headers: h, body: op.body, cache: 'no-store' }).then(function (r) {
+      if (r.status === 401 || r.status === 403) { throw new Error('GitHub no aceptó el permiso: revisá que esté vigente y que tenga Contents: Read and write sobre placas.'); }
+      if (r.status === 404) { throw new Error('GitHub no encontró el repo de la app con ese permiso: revisá que incluya el repo placas.'); }
+      if (r.status === 409 || r.status === 422) { throw new Error('Se publicó otra versión mientras tanto. Volvé a intentar.'); }
+      if (!r.ok) { throw new Error('GitHub respondió ' + r.status + '.'); }
+      return op.texto ? r.text() : r.json();
+    });
+  }
+  function ultima() {
+    var ruta = '/repos/' + REPO + '/contents/' + ARCHIVO + '?ref=main';
+    return gh(ruta).then(function (f) {
+      if (f.encoding === 'base64' && f.content) { return { sha: f.sha, html: dec.decode(bytes(f.content.replace(/\s/g, ''))) }; }
+      return gh(ruta, { texto: true, headers: { 'Accept': 'application/vnd.github.raw' } }).then(function (t) { return { sha: f.sha, html: t }; });
+    });
+  }
+  /** Aplica un cambio sobre la última versión del repo y la sube en un solo commit. */
+  function publicar(cambio, mensaje) {
+    if (!S.token) { return Promise.reject(new Error('Primero configurá el permiso de GitHub (abajo, en «Publicar desde este equipo»).')); }
+    var base;
+    return ultima().then(function (v) {
+      base = v;
+      return sesionDe(extraer(v.html), S.clave);
+    }).then(function (s) { return cambio(s); }).then(function (acc2) {
+      var html2 = reemplazar(base.html, acc2);
+      return gh('/repos/' + REPO + '/contents/' + ARCHIVO, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: mensaje, content: b64(enc.encode(html2)), sha: base.sha, branch: 'main' })
+      }).then(function () { return acc2; });
+    });
+  }
+
+  // ───────────────────────── permiso guardado en este equipo
+  function guardarToken(token) {
+    var sal = azar(16);
+    return kdf(S.clave, sal, 200000).then(function (k) { return sellar(k, enc.encode(token)); }).then(function (r) {
+      guardarLS(TOKEN_LS, JSON.stringify({ sal: b64(sal), iv: r.iv, ct: r.ct }));
+    });
+  }
+  function cargarToken(clave) {
+    var g = leerLS(TOKEN_LS);
+    if (!g) { return Promise.resolve(null); }
+    var x = JSON.parse(g);
+    return kdf(clave, bytes(x.sal), 200000).then(function (k) { return abrir(k, x.iv, x.ct); })
+      .then(function (t) { return dec.decode(t); }).catch(function () { return null; });
+  }
+
+  // ───────────────────────── pantalla
+  var visible = false;
+  function pintar() {
+    $('clave-vend').textContent = visible ? S.vend : '••••••••••';
+    $('b-ver').textContent = visible ? 'Ocultar' : 'Mostrar';
+    var c = S.acc.cambio ? new Date(S.acc.cambio) : null;
+    $('cambio').textContent = c ? c.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+    var e = $('estado-gh');
+    e.textContent = S.token ? 'Listo: este equipo puede publicar cambios.' : 'Falta configurar: sin el permiso de GitHub no se pueden publicar cambios.';
+    e.className = 'estado ' + (S.token ? 'ok' : 'falta');
+    $('d-gh').open = !S.token;
+  }
+  function generar() {
+    var abc = 'abcdefghjkmnpqrstuvwxyz23456789', r = azar(12), s = '';
+    for (var i = 0; i < 12; i++) { s += abc[r[i] % abc.length]; if (i === 3 || i === 7) { s += '-'; } }
+    return s;
+  }
+  function ocupado(boton, si, texto) {
+    boton.disabled = si;
+    if (si && texto) { boton.dataset.txt = boton.dataset.txt || boton.textContent; boton.textContent = texto; }
+    else if (!si && boton.dataset.txt) { boton.textContent = boton.dataset.txt; }
+  }
+
+  if (!window.crypto || !crypto.subtle) {
+    $('ingreso').hidden = false; $('b-entrar').disabled = true;
+    $('msg-ingreso').textContent = 'Este navegador no puede abrir la administración. Usá Chrome, Safari, Edge o Firefox actualizados.';
+    return;
+  }
+  $('ingreso').hidden = false;
+  $('clave-adm').focus();
+
+  $('ingreso').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var clave = $('clave-adm').value, b = $('b-entrar');
+    if (!clave) { return; }
+    ocupado(b, true, 'Entrando…'); $('msg-ingreso').textContent = '';
+    cargarToken(clave).then(function (token) {
+      S.token = token;
+      // Con permiso se lee la última versión del repo; sin permiso, la publicada (puede tardar unos minutos en verse).
+      return (token ? ultima().then(function (v) { return v.html; }).catch(function () {
+        S.token = null;                        // vencido o revocado: se pide configurarlo de nuevo
+        aviso('El permiso de GitHub guardado en este equipo no funcionó: configuralo de nuevo.', 'mal');
+        return publicada();
+      }) : publicada());
+    }).then(function (html) {
+      return sesionDe(extraer(html), clave);
+    }).then(function (s) {
+      S.clave = clave; S.ka = s.ka; S.raw = s.raw; S.vend = s.vend; S.acc = s.acc;
+      $('ingreso').hidden = true; $('panel').hidden = false;
+      pintar();
+    }).catch(function (err) {
+      ocupado(b, false);
+      $('msg-ingreso').textContent = err && err.name === 'OperationError' ? 'Clave incorrecta.' : (err && err.message || 'No se pudo entrar.');
+    });
+  });
+
+  $('b-ver').addEventListener('click', function () { visible = !visible; pintar(); });
+  $('b-copiar').addEventListener('click', function () {
+    var listo = function () { aviso('Clave de los vendedores copiada.', 'ok'); };
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(S.vend).then(listo, function () { aviso('No se pudo copiar: usá Mostrar.', 'mal'); }); }
+    else { aviso('No se pudo copiar: usá Mostrar.', 'mal'); }
+  });
+  $('b-generar').addEventListener('click', function () { $('nueva-vend').value = generar(); });
+
+  $('b-guardar-vend').addEventListener('click', function () {
+    var nueva = $('nueva-vend').value.trim(), b = this;
+    if (nueva.length < 8) { aviso('La clave de los vendedores tiene que tener al menos 8 caracteres.', 'mal'); return; }
+    if (nueva === S.vend) { aviso('Es la misma clave que ya tienen.', 'mal'); return; }
+    ocupado(b, true, 'Publicando…'); aviso('Cifrando y publicando…');
+    publicar(function (s) {
+      // Llave de la app nueva: así se cierran también los equipos que tenían la clave anterior recordada.
+      var raw2 = azar(32), salv = azar(16);
+      return llaveApp(s.raw).then(function (K) { return abrir(K, s.acc.app.iv, s.acc.app.ct); }).then(function (app) {
+        return Promise.all([llaveApp(raw2), kdf(nueva, salv, s.acc.iter)]).then(function (ks) {
+          return Promise.all([sellar(ks[0], app), sellar(ks[1], raw2), sellar(s.ka, raw2), sellar(s.ka, enc.encode(nueva))]);
+        });
+      }).then(function (r) {
+        return { v: s.acc.v, iter: s.acc.iter, app: { iv: r[0].iv, ct: r[0].ct },
+                 vend: { sal: b64(salv), iv: r[1].iv, k: r[1].ct },
+                 adm: { sal: s.acc.adm.sal, iv: r[2].iv, k: r[2].ct, ivc: r[3].iv, c: r[3].ct },
+                 cambio: new Date().toISOString() };
+      });
+    }, 'Cambia la clave de los vendedores').then(function (acc2) {
+      S.acc = acc2; S.vend = nueva; visible = true; pintar();
+      $('nueva-vend').value = ''; $('d-vend').open = false;
+      aviso('Publicada. En unos minutos rige la clave nueva; pasásela a los vendedores.', 'ok');
+    }).catch(function (err) { aviso(err && err.message || 'No se pudo publicar.', 'mal'); }).then(function () { ocupado(b, false); });
+  });
+
+  $('b-guardar-adm').addEventListener('click', function () {
+    var nueva = $('nueva-adm').value, otra = $('nueva-adm2').value, b = this;
+    if (nueva.length < 10) { aviso('Tu clave tiene que tener al menos 10 caracteres.', 'mal'); return; }
+    if (nueva !== otra) { aviso('Las dos claves no coinciden.', 'mal'); return; }
+    ocupado(b, true, 'Publicando…'); aviso('Cifrando y publicando…');
+    publicar(function (s) {
+      var sala = azar(16);
+      return kdf(nueva, sala, s.acc.iter).then(function (ka2) {
+        return Promise.all([sellar(ka2, s.raw), sellar(ka2, enc.encode(s.vend))]);
+      }).then(function (r) {
+        var a = JSON.parse(JSON.stringify(s.acc));
+        a.adm = { sal: b64(sala), iv: r[0].iv, k: r[0].ct, ivc: r[1].iv, c: r[1].ct };
+        a.cambio = new Date().toISOString();
+        return a;
+      });
+    }, 'Cambia la clave de administrador').then(function (acc2) {
+      S.acc = acc2; S.clave = nueva;
+      return guardarToken(S.token);
+    }).then(function () {
+      $('nueva-adm').value = ''; $('nueva-adm2').value = ''; $('d-adm').open = false; pintar();
+      aviso('Tu clave nueva quedó publicada. Desde ahora entrás con ella (también en el repo: avisale a Claude Code para actualizarla).', 'ok');
+    }).catch(function (err) { aviso(err && err.message || 'No se pudo publicar.', 'mal'); }).then(function () { ocupado(b, false); });
+  });
+
+  $('b-guardar-token').addEventListener('click', function () {
+    var t = $('token').value.trim(), b = this, previo = S.token;
+    if (!t) { return; }
+    ocupado(b, true, 'Probando…');
+    S.token = t;
+    // Leer la app comprueba que el permiso llega al repo; el de escritura se ve recién al publicar.
+    ultima().then(function (v) {
+      extraer(v.html);
+      return guardarToken(t);
+    }).then(function () {
+      $('token').value = ''; pintar();
+      aviso('Permiso guardado en este equipo.', 'ok');
+    }).catch(function (err) {
+      S.token = previo; pintar();
+      aviso(err && err.message || 'No se pudo comprobar el permiso.', 'mal');
+    }).then(function () { ocupado(b, false); });
+  });
+
+  $('b-salir').addEventListener('click', function () { S = {}; location.reload(); });
+})();
+</script>
+</body>
+</html>
