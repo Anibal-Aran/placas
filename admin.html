@@ -53,6 +53,8 @@ details .pri{margin-top:12px}
 .msg.mal{color:var(--mal)}
 .acciones{display:flex;gap:8px;flex-wrap:wrap}
 .nota{color:var(--muted);font-size:13px;margin:16px 2px 0}
+.ver{display:flex;align-items:center;gap:8px;font-weight:500;color:var(--ink2);margin:10px 0 0}
+.ver input{width:18px;height:18px;accent-color:var(--acc)}
 </style>
 </head>
 <body>
@@ -63,6 +65,7 @@ details .pri{margin-top:12px}
     <input type="text" name="username" value="placas-admin" autocomplete="username" hidden>
     <label for="clave-adm" style="margin-top:0">Clave de administrador</label>
     <input type="password" id="clave-adm" name="password" autocomplete="current-password" required>
+    <label class="ver"><input type="checkbox" id="ver-adm"> Ver la clave</label>
     <button class="pri" id="b-entrar">Entrar</button>
     <div class="msg mal" id="msg-ingreso" role="alert"></div>
   </form>
@@ -148,6 +151,21 @@ details .pri{margin-top:12px}
     return btoa(s);
   }
   function azar(n) { return crypto.getRandomValues(new Uint8Array(n)); }
+  /** Sin lo que suele colarse al copiar y pegar una clave: espacios en las puntas, comillas, guiones largos. */
+  function limpia(c) {
+    return String(c).replace(/[\u200B-\u200D\u2060\uFEFF]/g, '').replace(/\u00A0/g, ' ').trim()
+      .replace(/^[`'"«»“”‘’]+|[`'"«»“”‘’]+$/g, '').trim().replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-');
+  }
+  /** La clave tal cual y, si no abre, limpia y en minúsculas. */
+  function variantes(c) {
+    var n = limpia(c), v = [c, n, n.toLowerCase(), n.replace(/\s+/g, '').toLowerCase()];
+    return v.filter(function (x, i) { return x && v.indexOf(x) === i; });
+  }
+  function primeraQueAbra(lista, fn) {
+    var i = 0;
+    function sig(err) { if (i >= lista.length) { return Promise.reject(err); } return fn(lista[i++]).catch(sig); }
+    return sig(new Error('sin clave'));
+  }
   function aviso(txt, tipo) { var m = $('msg'); m.textContent = txt || ''; m.className = 'msg' + (tipo ? ' ' + tipo : ''); }
   function guardarLS(k, v) { try { if (v === null) { localStorage.removeItem(k); } else { localStorage.setItem(k, v); } } catch (e) {} }
   function leerLS(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -276,28 +294,47 @@ details .pri{margin-top:12px}
   $('ingreso').hidden = false;
   $('clave-adm').focus();
 
+  /** Entra con la clave (o la variante que abra). Con permiso guardado lee la última versión del repo; sin
+      permiso, la publicada, que puede tardar unos minutos en mostrar un cambio. */
+  function entrar(clave) {
+    var lista = variantes(clave), permiso = null;
+    return primeraQueAbra(lista, function (c) {
+      return cargarToken(c).then(function (t) { if (!t) { throw new Error('sin permiso'); } permiso = { c: c, t: t }; });
+    }).catch(function () {}).then(function () {
+      if (!permiso) { return null; }
+      S.token = permiso.t;
+      return ultima().then(function (v) { return v.html; }).catch(function () {
+        S.token = null;                        // vencido o revocado: se pide configurarlo de nuevo
+        aviso('El permiso de GitHub guardado en este equipo no funcionó: configuralo de nuevo.', 'mal');
+        return null;
+      });
+    }).then(function (html) {
+      return html || publicada();
+    }).then(function (html) {
+      var acc = extraer(html);
+      var orden = permiso ? [permiso.c].concat(lista.filter(function (c) { return c !== permiso.c; })) : lista;
+      return primeraQueAbra(orden, function (c) {
+        return sesionDe(acc, c).then(function (r) { r.clave = c; return r; });
+      });
+    });
+  }
+
+  $('ver-adm').addEventListener('change', function () { $('clave-adm').type = this.checked ? 'text' : 'password'; });
+
   $('ingreso').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var clave = $('clave-adm').value, b = $('b-entrar');
     if (!clave) { return; }
     ocupado(b, true, 'Entrando…'); $('msg-ingreso').textContent = '';
-    cargarToken(clave).then(function (token) {
-      S.token = token;
-      // Con permiso se lee la última versión del repo; sin permiso, la publicada (puede tardar unos minutos en verse).
-      return (token ? ultima().then(function (v) { return v.html; }).catch(function () {
-        S.token = null;                        // vencido o revocado: se pide configurarlo de nuevo
-        aviso('El permiso de GitHub guardado en este equipo no funcionó: configuralo de nuevo.', 'mal');
-        return publicada();
-      }) : publicada());
-    }).then(function (html) {
-      return sesionDe(extraer(html), clave);
-    }).then(function (s) {
-      S.clave = clave; S.ka = s.ka; S.raw = s.raw; S.vend = s.vend; S.acc = s.acc;
+    entrar(clave).then(function (s) {
+      S.clave = s.clave; S.ka = s.ka; S.raw = s.raw; S.vend = s.vend; S.acc = s.acc;
       $('ingreso').hidden = true; $('panel').hidden = false;
       pintar();
     }).catch(function (err) {
       ocupado(b, false);
-      $('msg-ingreso').textContent = err && err.name === 'OperationError' ? 'Clave incorrecta.' : (err && err.message || 'No se pudo entrar.');
+      $('msg-ingreso').textContent = err && err.name === 'OperationError'
+        ? 'Clave incorrecta. Probá escribirla a mano y tildá «Ver la clave» para revisarla.'
+        : (err && err.message || 'No se pudo entrar.');
     });
   });
 
@@ -310,7 +347,7 @@ details .pri{margin-top:12px}
   $('b-generar').addEventListener('click', function () { $('nueva-vend').value = generar(); });
 
   $('b-guardar-vend').addEventListener('click', function () {
-    var nueva = $('nueva-vend').value.trim(), b = this;
+    var nueva = limpia($('nueva-vend').value), b = this;
     if (nueva.length < 8) { aviso('La clave de los vendedores tiene que tener al menos 8 caracteres.', 'mal'); return; }
     if (nueva === S.vend) { aviso('Es la misma clave que ya tienen.', 'mal'); return; }
     ocupado(b, true, 'Publicando…'); aviso('Cifrando y publicando…');
@@ -335,7 +372,7 @@ details .pri{margin-top:12px}
   });
 
   $('b-guardar-adm').addEventListener('click', function () {
-    var nueva = $('nueva-adm').value, otra = $('nueva-adm2').value, b = this;
+    var nueva = limpia($('nueva-adm').value), otra = limpia($('nueva-adm2').value), b = this;
     if (nueva.length < 10) { aviso('Tu clave tiene que tener al menos 10 caracteres.', 'mal'); return; }
     if (nueva !== otra) { aviso('Las dos claves no coinciden.', 'mal'); return; }
     ocupado(b, true, 'Publicando…'); aviso('Cifrando y publicando…');
