@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
-<title>Administración · Placas de financiación</title>
+<title>Administración · Placas de Formas de Pago</title>
 <style>
 :root{--bg:#F2F3F5;--panel:#fff;--soft:#F7F8FA;--ink:#141A22;--ink2:#47515E;--muted:#6B7480;--line:#E2E5EA;--line2:#CDD2DA;
   --acc:#1D2331;--acc-ink:#fff;--ok:#137A3A;--mal:#9A4B00;--mal-bg:#FFF4E2;
@@ -59,7 +59,7 @@ details .pri{margin-top:12px}
 </head>
 <body>
 <main class="caja">
-  <header><h1>Administración</h1><p>Placas de financiación · acceso y claves</p></header>
+  <header><h1>Administración</h1><p>Placas de Formas de Pago · acceso y claves</p></header>
 
   <form class="tarjeta" id="ingreso" hidden autocomplete="on">
     <input type="text" name="username" value="placas-admin" autocomplete="username" hidden>
@@ -108,7 +108,7 @@ details .pri{margin-top:12px}
         <ol class="pasos">
           <li>Con la cuenta <b>Anibal-Aran</b>, entrá a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub › Fine-grained tokens › Generate new token</a>.</li>
           <li>Nombre: <b>Placas admin</b>. Vencimiento: el que prefieras (por ejemplo, un año).</li>
-          <li>Repository access: <b>Only select repositories</b> › <b>placas</b>.</li>
+          <li>Repository access: <b>Only select repositories</b> › <b>placas-formas-de-pago</b>.</li>
           <li>Permissions › Repository permissions › <b>Contents: Read and write</b>. Nada más.</li>
           <li><b>Generate token</b>, copialo y pegalo acá abajo.</li>
         </ol>
@@ -139,7 +139,7 @@ details .pri{margin-top:12px}
      navegador cifrado con la clave de administrador. */
 (function () {
   'use strict';
-  var API = 'https://api.github.com', REPO = 'Anibal-Aran/placas', ARCHIVO = 'index.html', TOKEN_LS = 'placas.admin.permiso';
+  var API = 'https://api.github.com', REPO = 'Anibal-Aran/placas-formas-de-pago', ARCHIVO = 'index.html', TOKEN_LS = 'placas.admin.permiso';
   var enc = new TextEncoder(), dec = new TextDecoder();
   var S = { clave: null, ka: null, raw: null, vend: null, acc: null, token: null };
 
@@ -218,8 +218,8 @@ details .pri{margin-top:12px}
     var h = { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + S.token, 'X-GitHub-Api-Version': '2022-11-28' };
     Object.keys(op.headers || {}).forEach(function (k) { h[k] = op.headers[k]; });
     return fetch(API + ruta, { method: op.method || 'GET', headers: h, body: op.body, cache: 'no-store' }).then(function (r) {
-      if (r.status === 401 || r.status === 403) { throw new Error('GitHub no aceptó el permiso: revisá que esté vigente y que tenga Contents: Read and write sobre placas.'); }
-      if (r.status === 404) { throw new Error('GitHub no encontró el repo de la app con ese permiso: revisá que incluya el repo placas.'); }
+      if (r.status === 401 || r.status === 403) { throw new Error('GitHub no aceptó el permiso: revisá que esté vigente y que tenga Contents: Read and write sobre placas-formas-de-pago.'); }
+      if (r.status === 404) { throw new Error('GitHub no encontró el repo de la app con ese permiso: revisá que incluya el repo placas-formas-de-pago.'); }
       if (r.status === 409 || r.status === 422) { throw new Error('Se publicó otra versión mientras tanto. Volvé a intentar.'); }
       if (!r.ok) { throw new Error('GitHub respondió ' + r.status + '.'); }
       return op.texto ? r.text() : r.json();
